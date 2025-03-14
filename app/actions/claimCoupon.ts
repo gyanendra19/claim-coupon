@@ -3,7 +3,14 @@
 import { cookies } from "next/headers";
 import { supabaseClient } from "./credentials";
 import { headers } from "next/headers";
+import { timeLeftToClaim } from "../utils/TimeLeft";
 
+type ExistingClaim = {
+  id: string;
+  claimed_at: string;
+  ip_address: string;
+  coupon_code: string;
+};
 
 export async function claimCoupon() {
   try {
@@ -13,8 +20,6 @@ export async function claimCoupon() {
     const forwardedFor = (await headers()).get("x-forwarded-for");
     const ip = forwardedFor ? forwardedFor.split(",")[0] : "UNKNOWN";
 
-    console.log(forwardedFor, ip, 'ip');
-    
     if (ip === "UNKNOWN") {
       return { success: false, message: "Could not detect IP address." };
     }
@@ -26,43 +31,48 @@ export async function claimCoupon() {
       .eq("ip_address", ip)
       .gte("claimed_at", new Date(Date.now() - 60 * 60 * 1000).toISOString());
 
-      console.log(existingClaims, 'claims');
       
+      let timeLeft;
+      if (existingClaims && existingClaims?.length > 0) {
+        timeLeft = timeLeftToClaim((existingClaims as ExistingClaim[])[0].claimed_at)
+      }
+      
+      console.log(existingClaims, "claims", timeLeft, 'sss');
     if (claimError) throw new Error(claimError.message);
 
-    if (existingClaims.length > 0) {
-      return { success: false, message: "You have already claimed a coupon. Try again in 1 hour." };
+    if (existingClaims.length > 0 && timeLeft) {
+      return {
+        success: false,
+        message: `You have already claimed a coupon. Try again in ${Math.floor(timeLeft/60/1000)} minutes.`,
+      };
     }
 
-    // 🔄 Step 2: Get the last assigned coupon
-    const { data: existingState, error: stateCheckError  } = await supabase
+    //  Step 2: Get the last assigned coupon
+    const { data: existingState, error: stateCheckError } = await supabase
       .from("global_coupon_state")
-      .select("last_assigned_coupon_id")
+      .select("last_assigned_coupon_id");
 
-      console.log(existingState, 'global');
-      
-    if (stateCheckError ) throw new Error(stateCheckError .message);
+    if (stateCheckError) throw new Error(stateCheckError.message);
 
     if (existingState.length === 0) {
       // Insert default row if none exists
       const { error: insertStateError } = await supabase
         .from("global_coupon_state")
-        .insert([{id: 1, last_assigned_coupon_id: 0 }]);
+        .insert([{ id: 1, last_assigned_coupon_id: 0 }]);
 
       if (insertStateError) throw new Error(insertStateError.message);
     }
 
     const { data: globalState, error: stateError } = await supabase
-    .from("global_coupon_state")
-    .select("last_assigned_coupon_id")
-    .limit(1); // Use limit instead of `.single()`
-
+      .from("global_coupon_state")
+      .select("last_assigned_coupon_id")
+      .limit(1);
 
     if (stateError) throw new Error(stateError.message);
 
     const lastCouponId = globalState[0]?.last_assigned_coupon_id || 0;
 
-    // 🎟 Step 3: Get the next available coupon in order
+    // Step 3: Get the next available coupon in order
     const { data: nextCouponRow, error: couponError } = await supabase
       .from("coupons")
       .select("id, code")
@@ -70,8 +80,6 @@ export async function claimCoupon() {
       .order("id", { ascending: true })
       .limit(1);
 
-    console.log(nextCouponRow, 'row');
-    
     let nextCoupon;
 
     if (couponError) throw new Error(couponError.message);
@@ -93,7 +101,7 @@ export async function claimCoupon() {
       nextCoupon = nextCouponRow[0];
     }
 
-    // 🔄 Step 4: Update global state with the new last assigned coupon
+    // Step 4: Update global state with the new last assigned coupon
     const { error: updateError } = await supabase
       .from("global_coupon_state")
       .update({ last_assigned_coupon_id: nextCoupon.id })
@@ -101,17 +109,17 @@ export async function claimCoupon() {
 
     if (updateError) throw new Error(updateError.message);
 
-    // 📝 Step 5: Save the claim in the database
+    // Step 5: Save the claim in the database
     const { error: insertError } = await supabase
       .from("claims")
       .insert({ ip_address: ip, coupon_code: nextCoupon.code });
 
     if (insertError) throw new Error(insertError.message);
 
-    // 🍪 Step 6: Set a cookie to prevent unnecessary requests
+    // Step 6: Set a cookie to prevent unnecessary requests
     (await cookies()).set({
       name: "coupon_claimed",
-      value: "true",
+      value: `${Date.now()}`,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
@@ -119,9 +127,16 @@ export async function claimCoupon() {
       path: "/",
     });
 
-    return { success: true, message: "Coupon claimed successfully!", coupon: nextCoupon.code };
+    return {
+      success: true,
+      message: "Coupon claimed successfully!",
+      coupon: nextCoupon.code,
+    };
   } catch (error) {
     console.error("Error claiming coupon:", error);
-    return { success: false, message: "Something went wrong. Please try again later." };
+    return {
+      success: false,
+      message: "Something went wrong. Please try again later.",
+    };
   }
 }

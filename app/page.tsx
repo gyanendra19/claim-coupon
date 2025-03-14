@@ -1,7 +1,8 @@
-'use client'
+"use client";
 import { useState } from "react";
 import { claimCoupon } from "./actions/claimCoupon";
 import { checkCookies } from "./actions/checkCookies";
+import { timeLeftToClaim } from "./utils/TimeLeft";
 
 export default function Home() {
   const [message, setMessage] = useState<string | null>(null);
@@ -11,13 +12,20 @@ export default function Home() {
   const claimCouponCode = async () => {
     setLoading(true);
     try {
-      const res = await checkCookies()   
-      if (res !== 'No cookie found.') {
-        setMessage('Coupon already claimed.Try in 1 hour')
-        setLoading(false)
-        return
+      const res = await checkCookies();
+      const timeLeft = timeLeftToClaim(Number(res));
+
+      // Check cookies for faster response
+      if (res !== "No cookie found.") {
+        setMessage(
+          `Coupon already claimed.Try in ${Math.floor(
+            timeLeft / 60 / 1000
+          )} minutes`
+        );
+        setLoading(false);
+        return;
       }
-      const response = await claimCoupon()
+      const response = await claimCoupon();
       setMessage(response.message);
       setCoupon(response.coupon || null);
     } catch (error: any) {
@@ -25,14 +33,16 @@ export default function Home() {
     }
     setLoading(false);
   };
-  
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-md text-center w-96">
         <h1 className="text-2xl font-bold mb-4">Claim Your Coupon</h1>
-        
+
         {coupon ? (
-          <p className="text-green-600 font-semibold">🎉 Your Coupon: {coupon}</p>
+          <p className="text-green-600 font-semibold">
+            🎉 Your Coupon: {coupon}
+          </p>
         ) : (
           <button
             onClick={claimCouponCode}
