@@ -16,7 +16,7 @@ export default function Home() {
       const timeLeft = timeLeftToClaim(Number(res));
 
       // Check cookies for faster response
-      if (res !== "No cookie found.") {
+      if (res !== "No cookie found." && timeLeft) {
         setMessage(
           `Coupon already claimed.Try in ${Math.floor(
             timeLeft / 60 / 1000

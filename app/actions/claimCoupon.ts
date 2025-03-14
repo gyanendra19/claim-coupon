@@ -34,6 +34,8 @@ export async function claimCoupon() {
       
       let timeLeft;
       if (existingClaims && existingClaims?.length > 0) {
+        console.log('hehelss');
+        
         timeLeft = timeLeftToClaim((existingClaims as ExistingClaim[])[0].claimed_at)
       }
       
