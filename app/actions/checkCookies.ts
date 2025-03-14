@@ -1,5 +1,6 @@
-import { cookies } from "next/headers";
+'use server'
 
+import { cookies } from "next/headers";
 
 export async function checkCookies() {
   const allCookies = cookies(); // Get all cookies
