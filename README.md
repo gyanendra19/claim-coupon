@@ -1,10 +1,21 @@
-## Running locally in development mode
+### Abuse Prevention Strategies
 
-1️⃣ Cookie & IP Tracking – Uses HTTP-only cookies and IP logging to track users and prevent multiple claims from the same device.
-2️⃣ Rate Limiting – Enforces a cooldown period (e.g., 1 hour) before a user can claim again.
-3️⃣ Database Constraints – Ensures uniqueness of claims per user and prevents duplicate redemptions via foreign key and unique constraints.
-4️⃣ Server-side Validation – Claims are verified on the server, preventing client-side tampering or bypassing.
-5️⃣ Round Robin Distribution – Coupons are assigned in sequential order to distribute them fairly among users.
+- **Cookie & IP Tracking**  
+  Uses HTTP-only cookies and IP logging to track users and prevent multiple claims from the same device.  
+
+- **Rate Limiting**  
+  Enforces a cooldown period (e.g., 1 hour) before a user can claim again.  
+
+- **Database Constraints**  
+  Ensures uniqueness of claims per user and prevents duplicate redemptions via foreign key and unique constraints.  
+
+- **Server-side Validation**  
+  Claims are verified on the server, preventing client-side tampering or bypassing.  
+
+- **Round Robin Distribution**  
+  Coupons are assigned in sequential order to distribute them fairly among users.  
+
+## Running locally in development mode
 
 To get started, just clone the repository and run `npm install && npm run dev`:
 
@@ -12,4 +23,6 @@ To get started, just clone the repository and run `npm install && npm run dev`:
     cd project-name
     npm install
     npm run dev
+
+
 
