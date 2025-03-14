@@ -1,6 +1,7 @@
 'use client'
 import { useState } from "react";
-import { checkCookies, claimCoupon } from "./actions/claimCoupon";
+import { claimCoupon } from "./actions/claimCoupon";
+import { checkCookies } from "./actions/checkCookies";
 
 export default function Home() {
   const [message, setMessage] = useState<string | null>(null);
@@ -12,6 +13,7 @@ export default function Home() {
     try {
       const res = await checkCookies()   
       if (res !== 'No cookie found.') {
+        setMessage('Coupon already claimed.Try in 1 hour')
         setLoading(false)
         return
       }
